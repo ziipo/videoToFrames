@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video to Frames - Extract GIF Frames</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+
+        .upload-section {
+            border: 3px dashed #667eea;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            background: #f8f9ff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .upload-section.drag-over {
+            border-color: #764ba2;
+            background: #e8ebff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .controls {
+            background: #f8f9ff;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            display: none;
+        }
+
+        .controls.active {
+            display: block;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .control-group input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .control-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+
+        .control-group input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: none;
+        }
+
+        .value-display {
+            display: inline-block;
+            margin-left: 10px;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .preview-section {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .preview-section.active {
+            display: block;
+        }
+
+        .section-title {
+            font-size: 1.5em;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .frames-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .frame-item {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .frame-item:hover {
+            transform: scale(1.05);
+        }
+
+        .frame-item img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .frame-number {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .gif-preview {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .gif-preview img {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .download-section {
+            text-align: center;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .video-preview {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .video-preview video {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 Video to Frames</h1>
+        <p class="subtitle">Extract frames from your video and create an animated GIF</p>
+
+        <div class="upload-section" id="uploadSection">
+            <div class="upload-icon">📹</div>
+            <h2>Drop a video file here or click to upload</h2>
+            <p style="margin-top: 10px; color: #666;">Supports MP4, WebM, and other video formats</p>
+            <input type="file" id="videoInput" accept="video/*">
+        </div>
+
+        <div class="video-preview" id="videoPreview">
+            <video id="videoElement" controls style="display: none;"></video>
+        </div>
+
+        <div class="controls" id="controls">
+            <div class="control-group">
+                <label>
+                    Number of Frames: <span class="value-display" id="frameCountValue">10</span>
+                </label>
+                <input type="range" id="frameCount" min="2" max="50" value="10">
+            </div>
+            <div class="control-group">
+                <label>
+                    GIF Animation Speed (ms per frame): <span class="value-display" id="delayValue">100</span>
+                </label>
+                <input type="range" id="gifDelay" min="50" max="500" value="100" step="50">
+            </div>
+            <div style="text-align: center;">
+                <button class="btn" id="extractBtn">Extract Frames</button>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processing your video...</p>
+        </div>
+
+        <div class="preview-section" id="previewSection">
+            <h2 class="section-title">📸 Extracted Frames</h2>
+            <div class="frames-grid" id="framesGrid"></div>
+
+            <h2 class="section-title">🎞️ Animated GIF Preview</h2>
+            <div class="gif-preview" id="gifPreview"></div>
+
+            <div class="download-section">
+                <button class="btn" id="downloadFramesBtn">Download All Frames (ZIP)</button>
+                <button class="btn" id="downloadGifBtn">Download GIF</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        const uploadSection = document.getElementById('uploadSection');
+        const videoInput = document.getElementById('videoInput');
+        const videoElement = document.getElementById('videoElement');
+        const videoPreview = document.getElementById('videoPreview');
+        const controls = document.getElementById('controls');
+        const extractBtn = document.getElementById('extractBtn');
+        const frameCountInput = document.getElementById('frameCount');
+        const frameCountValue = document.getElementById('frameCountValue');
+        const gifDelayInput = document.getElementById('gifDelay');
+        const delayValue = document.getElementById('delayValue');
+        const loading = document.getElementById('loading');
+        const previewSection = document.getElementById('previewSection');
+        const framesGrid = document.getElementById('framesGrid');
+        const gifPreview = document.getElementById('gifPreview');
+        const downloadFramesBtn = document.getElementById('downloadFramesBtn');
+        const downloadGifBtn = document.getElementById('downloadGifBtn');
+
+        let extractedFrames = [];
+        let generatedGif = null;
+
+        // Upload section interactions
+        uploadSection.addEventListener('click', () => videoInput.click());
+
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('drag-over');
+        });
+
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('drag-over');
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('video/')) {
+                handleVideoUpload(file);
+            }
+        });
+
+        videoInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleVideoUpload(file);
+            }
+        });
+
+        function handleVideoUpload(file) {
+            const url = URL.createObjectURL(file);
+            videoElement.src = url;
+            videoElement.style.display = 'block';
+            controls.classList.add('active');
+            previewSection.classList.remove('active');
+            extractedFrames = [];
+        }
+
+        // Range inputs
+        frameCountInput.addEventListener('input', (e) => {
+            frameCountValue.textContent = e.target.value;
+        });
+
+        gifDelayInput.addEventListener('input', (e) => {
+            delayValue.textContent = e.target.value;
+        });
+
+        // Extract frames
+        extractBtn.addEventListener('click', async () => {
+            const frameCount = parseInt(frameCountInput.value);
+            const gifDelay = parseInt(gifDelayInput.value);
+
+            loading.classList.add('active');
+            previewSection.classList.remove('active');
+            extractedFrames = [];
+
+            await extractFrames(frameCount);
+            await generateGIF(gifDelay);
+
+            loading.classList.remove('active');
+            previewSection.classList.add('active');
+        });
+
+        async function extractFrames(count) {
+            return new Promise((resolve) => {
+                const video = videoElement;
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                video.addEventListener('loadedmetadata', () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+
+                    const duration = video.duration;
+                    const interval = duration / (count + 1);
+                    let currentFrame = 0;
+
+                    framesGrid.innerHTML = '';
+
+                    const captureFrame = () => {
+                        if (currentFrame >= count) {
+                            resolve();
+                            return;
+                        }
+
+                        const time = interval * (currentFrame + 1);
+                        video.currentTime = time;
+
+                        video.addEventListener('seeked', function onSeeked() {
+                            video.removeEventListener('seeked', onSeeked);
+
+                            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                            canvas.toBlob((blob) => {
+                                const url = URL.createObjectURL(blob);
+                                extractedFrames.push({ blob, url, canvas: canvas.cloneNode() });
+
+                                // Display frame
+                                const frameItem = document.createElement('div');
+                                frameItem.className = 'frame-item';
+                                frameItem.innerHTML = `
+                                    <img src="${url}" alt="Frame ${currentFrame + 1}">
+                                    <div class="frame-number">#${currentFrame + 1}</div>
+                                `;
+                                framesGrid.appendChild(frameItem);
+
+                                currentFrame++;
+                                captureFrame();
+                            });
+                        }, { once: true });
+                    };
+
+                    captureFrame();
+                }, { once: true });
+
+                // Trigger metadata load
+                video.load();
+            });
+        }
+
+        async function generateGIF(delay) {
+            return new Promise((resolve) => {
+                const video = videoElement;
+                const gif = new GIF({
+                    workers: 2,
+                    quality: 10,
+                    width: video.videoWidth,
+                    height: video.videoHeight,
+                    workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js'
+                });
+
+                extractedFrames.forEach(frame => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const ctx = canvas.getContext('2d');
+
+                    const img = new Image();
+                    img.src = frame.url;
+                    ctx.drawImage(img, 0, 0);
+
+                    gif.addFrame(canvas, { delay });
+                });
+
+                gif.on('finished', (blob) => {
+                    generatedGif = blob;
+                    const url = URL.createObjectURL(blob);
+                    gifPreview.innerHTML = `<img src="${url}" alt="Animated GIF">`;
+                    resolve();
+                });
+
+                gif.render();
+            });
+        }
+
+        // Download frames as ZIP
+        downloadFramesBtn.addEventListener('click', async () => {
+            const zip = new JSZip();
+            const folder = zip.folder('frames');
+
+            for (let i = 0; i < extractedFrames.length; i++) {
+                const frame = extractedFrames[i];
+                folder.file(`frame-${String(i + 1).padStart(3, '0')}.png`, frame.blob);
+            }
+
+            const content = await zip.generateAsync({ type: 'blob' });
+            const url = URL.createObjectURL(content);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'video-frames.zip';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        // Download GIF
+        downloadGifBtn.addEventListener('click', () => {
+            if (generatedGif) {
+                const url = URL.createObjectURL(generatedGif);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'animated.gif';
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+        });
+    </script>
+</body>
+</html>
