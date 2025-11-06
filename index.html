@@ -270,6 +270,9 @@
             <h2>Drop a video file here or click to upload</h2>
             <p style="margin-top: 10px; color: #666;">Supports MP4, WebM, and other video formats</p>
             <input type="file" id="videoInput" accept="video/*">
+            <div style="margin-top: 20px;">
+                <button class="btn" id="loadSampleBtn">🎥 Try Sample Video</button>
+            </div>
         </div>
 
         <div class="video-preview" id="videoPreview">
@@ -332,6 +335,7 @@
         const gifPreview = document.getElementById('gifPreview');
         const downloadFramesBtn = document.getElementById('downloadFramesBtn');
         const downloadGifBtn = document.getElementById('downloadGifBtn');
+        const loadSampleBtn = document.getElementById('loadSampleBtn');
 
         let extractedFrames = [];
         let generatedGif = null;
@@ -361,6 +365,20 @@
             const file = e.target.files[0];
             if (file) {
                 handleVideoUpload(file);
+            }
+        });
+
+        // Load sample video
+        loadSampleBtn.addEventListener('click', async (e) => {
+            e.stopPropagation(); // Prevent triggering upload section click
+            try {
+                const response = await fetch('sample.mp4');
+                const blob = await response.blob();
+                const file = new File([blob], 'sample.mp4', { type: 'video/mp4' });
+                handleVideoUpload(file);
+            } catch (error) {
+                alert('Error loading sample video. Please try uploading your own video.');
+                console.error('Error loading sample:', error);
             }
         });
 
